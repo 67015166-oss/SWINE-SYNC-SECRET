@@ -17,7 +17,10 @@ have "$NR/flows_cred.json"
 have "$NR/settings.js"
 
 echo "— ต้นทางบนกล่อง —"
-if out=$(ssh -o BatchMode=yes -o ConnectTimeout=10 "$BOX" \
+if src_overridden; then
+  have "$SRC_ENV"
+  have "$SRC_PW"
+elif out=$(ssh -o BatchMode=yes -o ConnectTimeout=10 "$BOX" \
   "for f in '$BOX_ENV' '$BOX_PW'; do [ -f \"\$f\" ] && echo \"มี     \$f\" || echo \"ไม่พบ  \$f\"; done" 2>&1); then
   echo "$out"
   echo "$out" | grep -q "ไม่พบ" && ok=1
@@ -33,7 +36,7 @@ done
 
 echo
 if [ "$ok" = 0 ]; then
-  echo "[ พร้อม ] ทำใบใหม่ได้ —  BOX=$BOX sh ops/seal.sh"
+  echo "[ พร้อม ] ทำใบใหม่ได้ —  BOX=${BOX:-root@<ที่อยู่ของกล่อง>} sh ops/seal.sh"
 else
   echo "[ ยังไม่พร้อม ] แก้บรรทัดที่ขึ้น ไม่พบ / ค้าง ก่อน แล้วรันอันนี้ซ้ำ"
 fi
