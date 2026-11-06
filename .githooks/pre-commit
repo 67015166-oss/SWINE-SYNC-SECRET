@@ -1,0 +1,56 @@
+#!/bin/sh
+# ★★ กันความลับหลุดขึ้น git — ขึ้นไปแล้วลบออกจากประวัติไม่ได้จริง
+#
+# ติดตั้ง:  git config core.hooksPath .githooks
+# ตรวจมือ:  sh .githooks/pre-commit
+#
+# สามด่าน  1) ไฟล์ที่ไม่อยู่ในรายชื่อที่อนุญาต  2) ก้อนที่ไม่ใช่ไฟล์เข้ารหัสจริง
+#          3) คีย์ที่เป็นความลับแต่มีค่าใส่ไว้
+#
+# ★ ใช้ core.quotePath=false เพราะชื่อไฟล์ในรีโปนี้เป็นภาษาไทย
+#   ถ้าไม่ตั้ง git จะคืนชื่อเป็นรหัส \340\270... แล้วทุกด่านจะจับไม่ตรงและพังเงียบ ๆ
+set -u
+
+GIT="git -c core.quotePath=false"
+staged=$($GIT diff --cached --name-only --diff-filter=ACM)
+[ -n "$staged" ] || exit 0
+
+keys='ADMIN_PASSWORD|POSTGRES_PASSWORD|DATABASE_URL|REMOTE_DATABASE_URL|HUB_KEY_SECRET'
+keys="$keys|LINE_CHANNEL_ACCESS_TOKEN|LINE_CHANNEL_SECRET|CPF_AI_API_KEY|FARMY_PASSWORD"
+keys="$keys|INFLUX_TOKEN|PLOTNEXUS_KEY|VITE_PLOTNEXUS_KEY|WX_DB_PASSWORD|CONTROL_OUTBOX_TOKEN"
+
+rc=0
+printf '%s\n' "$staged" | while IFS= read -r f; do
+  [ -n "$f" ] || continue
+
+  # ── ด่าน 1 — อนุญาตเฉพาะที่ระบุไว้
+  case "$f" in
+    .gitignore|.githooks/pre-commit|*.md|ตัวอย่าง/*.example|ops/*.sh|ก้อนความลับ/.gitkeep) ;;
+    ก้อนความลับ/*.tar.gz.enc)
+      # ── ด่าน 2 — ต้องเป็นไฟล์ที่ openssl เข้ารหัสจริง (ขึ้นต้นด้วย Salted__)
+      if [ "$($GIT show ":$f" | head -c 8)" != "Salted__" ]; then
+        echo "ปฏิเสธ: ก้อนนี้ไม่ใช่ไฟล์เข้ารหัสของเรา — $f" >&2
+        exit 1
+      fi
+      continue ;;
+    *)
+      echo "ปฏิเสธ: ไฟล์ชนิดนี้ไม่อนุญาตในรีโปความลับ — $f" >&2
+      echo "  ➜ ถ้าจำเป็นจริง ต้องไปเปิดทางใน .gitignore และในไฟล์นี้ด้วยมือ" >&2
+      exit 1 ;;
+  esac
+
+  # ── ด่าน 3 — คีย์ความลับต้องเว้นว่างเสมอในไฟล์ที่ขึ้น git
+  if $GIT show ":$f" | grep -nEq "^[[:space:]]*($keys)=[^[:space:]]"; then
+    echo "ปฏิเสธ: มีค่าจริงใส่ไว้ใน $f" >&2
+    $GIT show ":$f" | grep -nE "^[[:space:]]*($keys)=[^[:space:]]" \
+      | cut -d: -f1 | sed 's/^/    บรรทัดที่ /' >&2
+    exit 1
+  fi
+done || rc=1
+
+if [ "$rc" != 0 ]; then
+  echo >&2
+  echo "★ ไม่ commit ให้ — แก้ตามด้านบนก่อน" >&2
+  exit 1
+fi
+exit 0
