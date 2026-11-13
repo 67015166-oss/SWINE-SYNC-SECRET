@@ -29,3 +29,9 @@ be_today() { echo "$(( $(date +%Y) + 543 ))-$(date +%m-%d)"; }
 
 # ใบล่าสุดในโฟลเดอร์ (เรียงตามชื่อ ซึ่งมีวันที่อยู่ในตัว)
 newest_bundle() { ls -1 "$BUNDLES"/*.tar.gz.enc 2>/dev/null | sort | tail -1; }
+
+# รหัสจากไฟล์ (บรรทัดแรก) แทนการพิมพ์ — ตั้ง PASSFILE= ชี้ไฟล์
+# ★ ใช้ตอนที่รหัสอยู่ในรีโปอยู่แล้ว การพิมพ์ซ้ำจึงไม่ได้เพิ่มความปลอดภัยอะไร
+PASSFILE="${PASSFILE:-}"
+pass_args() { [ -n "$PASSFILE" ] && printf '%s' "-pass file:$PASSFILE"; return 0; }
+KEYFILE="รหัสเปิดก้อน.txt"

@@ -31,10 +31,16 @@ done
 echo "ใบที่เปิด: $file"
 head -c 8 "$file" | grep -q "Salted__" || { echo "ไม่ใช่ไฟล์เข้ารหัสของเรา"; exit 1; }
 
-open_bundle() { openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in "$file"; }
+open_bundle() {
+  if [ -n "$PASSFILE" ]; then
+    openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in "$file" -pass "file:$PASSFILE"
+  else
+    openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in "$file"
+  fi
+}
 
 if [ "$extract" = 0 ]; then
-  echo "— ใส่รหัสผ่าน —"
+  [ -n "$PASSFILE" ] || echo "— ใส่รหัสผ่าน —"
   list=$(open_bundle | LC_ALL=en_US.UTF-8 tar tzf - || true)
   n=$(printf '%s\n' "$list" | grep -vcE '^(\./)?$' || true)
   if [ "$n" -eq 0 ]; then
@@ -51,7 +57,7 @@ if [ "$extract" = 0 ]; then
   [ "$expect" -gt 0 ] || echo "★ ใบที่ทำตั้งแต่ 6 พ.ย. 2569 ต้องมี 6 ไฟล์ · ใบเก่ากว่านั้นมี 5"
 else
   DEST=$(mktemp -d)
-  echo "— ใส่รหัสผ่าน —"
+  [ -n "$PASSFILE" ] || echo "— ใส่รหัสผ่าน —"
   open_bundle | LC_ALL=en_US.UTF-8 tar xzf - -C "$DEST" || true
   n=$(ls -1A "$DEST" | wc -l | tr -d ' ')
   if [ "$n" -eq 0 ]; then

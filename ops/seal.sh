@@ -46,9 +46,14 @@ done
 [ -e "$OUT" ] && { echo "วันนี้มีใบครบทุกชื่อแล้ว — ลบใบที่ไม่ใช้ก่อน"; exit 1; }
 
 echo
-echo "— ใส่รหัสผ่านที่จะใช้ปิดก้อน (หน้าจอไม่แสดงตัวอักษร ถามสองครั้ง) —"
-echo "★ ก๊อปจากที่เก็บรหัสมาวาง อย่าคิดสดตอนนี้"
-openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$TAR" -out "$TMPOUT"
+if [ -n "$PASSFILE" ]; then
+  echo "— ใช้รหัสจากไฟล์ $PASSFILE (ไม่ต้องพิมพ์) —"
+  openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$TAR" -out "$TMPOUT" -pass "file:$PASSFILE"
+else
+  echo "— ใส่รหัสผ่านที่จะใช้ปิดก้อน (หน้าจอไม่แสดงตัวอักษร ถามสองครั้ง) —"
+  echo "★ ก๊อปจากที่เก็บรหัสมาวาง อย่าคิดสดตอนนี้"
+  openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$TAR" -out "$TMPOUT"
+fi
 
 head -c 8 "$TMPOUT" | grep -q "Salted__" || { echo "ผลลัพธ์ไม่ใช่ไฟล์เข้ารหัส — ไม่เก็บ"; exit 1; }
 cp "$TMPOUT" "$OUT"
