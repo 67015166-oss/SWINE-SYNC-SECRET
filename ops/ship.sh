@@ -61,7 +61,9 @@ echo "═══ 3/4 เปิดดูว่าเปิดได้จริง
 sh ops/verify.sh --expect 6 "$new"
 
 printf '\nเปิดได้ครบ 6 ไฟล์ตามด้านบนแล้ว · ยืนยัน push ไหม (y = push · อย่างอื่น = หยุด) ? '
-IFS= read -r ans
+# ★ อ่านจาก /dev/tty ไม่ใช่ stdin — โปรเซสลูก (preflight/seal/verify) กิน stdin ไปก่อนได้
+#   เจอจริง 13 พ.ย. 2569: ป้อน y ทางท่อแล้วสคริปต์หยุดที่ช่องนี้เฉย ๆ ไม่ push
+if [ -r /dev/tty ]; then IFS= read -r ans < /dev/tty; else IFS= read -r ans; fi
 case "$ans" in
   y|Y|yes) ;;
   *) echo "หยุดแล้ว — ใบอยู่ที่ $new แต่ยังไม่ขึ้น git"; exit 1 ;;
