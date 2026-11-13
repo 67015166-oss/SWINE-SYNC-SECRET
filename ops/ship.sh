@@ -19,6 +19,15 @@ box_required
 auto_key=0
 [ "${1:-}" = "--auto-key" ] && auto_key=1
 
+
+# ให้ตัวกันความลับหลุดทำงานแน่ ๆ (git ไม่ติดตั้ง hook ให้เองตอน clone)
+git config core.hooksPath .githooks
+
+echo "═══ 1/4 ตรวจต้นทาง ═══"
+sh ops/preflight.sh
+
+# ★ สุ่มรหัสหลังตรวจต้นทางผ่านแล้วเท่านั้น — ของเดิมสุ่มก่อน พอ preflight ล้ม
+#   ก็เหลือไฟล์รหัสค้างอยู่ทั้งที่ไม่มีก้อนไหนใช้มัน (เจอจริง 13 พ.ย. 2569)
 if [ "$auto_key" = 1 ]; then
   if [ ! -f "$KEYFILE" ]; then
     echo "— สุ่มรหัสใหม่เก็บไว้ที่ $KEYFILE —"
@@ -37,12 +46,6 @@ if [ "$auto_key" = 1 ]; then
   PASSFILE="$PWD/$KEYFILE"
   export PASSFILE
 fi
-
-# ให้ตัวกันความลับหลุดทำงานแน่ ๆ (git ไม่ติดตั้ง hook ให้เองตอน clone)
-git config core.hooksPath .githooks
-
-echo "═══ 1/4 ตรวจต้นทาง ═══"
-sh ops/preflight.sh
 
 echo
 if [ "$auto_key" = 1 ]; then
